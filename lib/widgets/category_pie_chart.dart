@@ -1,6 +1,7 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../utils/category_icons.dart';
 
@@ -9,69 +10,90 @@ class CategoryPieChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryTotals = ref.watch(categoryTotalsProvider);
-    final total = categoryTotals.values.fold<double>(0, (a, b) => a + b);
+    final dateRange = ref.watch(dateRangeProvider);
+    final expensesAsync = ref.watch(expensesProvider(dateRange));
 
-    if (total == 0) {
-      return const SizedBox(
-        height: 180,
-        child: Center(
-          child: Text('No expenses to display'),
-        ),
-      );
-    }
+    return expensesAsync.when(
+      data: (expenses) {
+        if (expenses.isEmpty) {
+          return const Center(
+            child: Text('No expenses in this period'),
+          );
+        }
 
-    final sections = categoryTotals.entries.map((entry) {
-      final color = Colors.primaries[entry.key.hashCode % Colors.primaries.length];
-      return PieChartSectionData(
-        value: entry.value,
-        title: '${(entry.value / total * 100).toStringAsFixed(1)}%',
-        titleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white,
+        // Only show expenses, not income
+        final expensesList = expenses.where((e) => e.type == TransactionType.expense).toList();
+        if (expensesList.isEmpty) {
+          return const Center(
+            child: Text('No expenses in this period'),
+          );
+        }
+
+        final categoryTotals = <String, double>{};
+        for (final expense in expensesList) {
+          categoryTotals[expense.category] = (categoryTotals[expense.category] ?? 0) + expense.amount;
+        }
+
+        final totalAmount = categoryTotals.values.reduce((a, b) => a + b);
+        final sections = categoryTotals.entries.map((entry) {
+          final color = Colors.primaries[entry.key.hashCode % Colors.primaries.length];
+          return PieChartSectionData(
+            color: color,
+            value: entry.value,
+            title: '${(entry.value / totalAmount * 100).toStringAsFixed(1)}%',
+            radius: 100,
+            titleStyle: const TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-        color: color,
-        radius: 80,
-        showTitle: entry.value / total > 0.05, // Only show label if segment is >5%
-      );
-    }).toList();
+          );
+        }).toList();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: 180,
-          child: PieChart(
-            PieChartData(
-              sections: sections,
-              sectionsSpace: 2,
-              centerSpaceRadius: 25,
-              startDegreeOffset: -90,
+        return Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: PieChart(
+                PieChartData(
+                  sections: sections,
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 0,
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: categoryTotals.entries.map((entry) {
-            final color = Colors.primaries[entry.key.hashCode % Colors.primaries.length];
-            return Chip(
-              avatar: Icon(
-                CategoryIcons.getIcon(entry.key),
-                color: color,
-                size: 18,
-              ),
-              backgroundColor: color.withOpacity(0.1),
-              side: BorderSide(color: color),
-              label: Text(
-                '${entry.key}: ${(entry.value / total * 100).toStringAsFixed(1)}%',
-                style: TextStyle(color: color),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: categoryTotals.entries.map((entry) {
+                final color = Colors.primaries[entry.key.hashCode % Colors.primaries.length];
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${entry.key}: \$${entry.value.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 }

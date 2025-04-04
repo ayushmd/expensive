@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../services/database_service.dart';
 import '../utils/category_icons.dart';
@@ -10,7 +11,8 @@ class ExpenseList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final expensesAsync = ref.watch(expensesProvider);
+    final dateRange = ref.watch(dateRangeProvider);
+    final expensesAsync = ref.watch(expensesProvider(dateRange));
 
     return expensesAsync.when(
       data: (expenses) {
@@ -99,7 +101,9 @@ class ExpenseList extends ConsumerWidget {
                     separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final expense = dayExpenses[index];
-                      final color = Colors.primaries[expense.category.hashCode % Colors.primaries.length];
+                      final color = expense.type == TransactionType.income
+                        ? Colors.green
+                        : Colors.primaries[expense.category.hashCode % Colors.primaries.length];
 
                       return Dismissible(
                         key: Key(expense.id.toString()),
@@ -126,7 +130,9 @@ class ExpenseList extends ConsumerWidget {
                           leading: CircleAvatar(
                             backgroundColor: color.withOpacity(0.2),
                             child: Icon(
-                              CategoryIcons.getIcon(expense.category),
+                              expense.type == TransactionType.income
+                                  ? Icons.add_circle_outline
+                                  : CategoryIcons.getIcon(expense.category),
                               color: color,
                               size: 20,
                             ),
@@ -141,21 +147,12 @@ class ExpenseList extends ConsumerWidget {
                           subtitle: expense.description?.isNotEmpty == true
                               ? Text(expense.description!)
                               : null,
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                NumberFormat.currency(symbol: '\$').format(expense.amount),
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                              Text(
-                                DateFormat.jm().format(expense.date),
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
+                          trailing: Text(
+                            '${expense.type == TransactionType.income ? '+' : '-'}\$${expense.amount.toStringAsFixed(2)}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: expense.type == TransactionType.income ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       );

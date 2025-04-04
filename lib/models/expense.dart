@@ -2,6 +2,11 @@ import 'package:isar/isar.dart';
 
 part 'expense.g.dart';
 
+enum TransactionType {
+  expense,
+  income
+}
+
 @collection
 class Expense {
   Id id = Isar.autoIncrement;
@@ -17,10 +22,14 @@ class Expense {
   @Index()
   DateTime date;
 
+  @enumerated
+  TransactionType type;
+
   Expense({
     required this.amount,
     required this.category,
     this.description,
     required this.date,
+    required this.type,
   });
 }

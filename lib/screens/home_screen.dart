@@ -10,61 +10,140 @@ import 'add_expense_screen.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  Widget _buildAmountCard(
+    BuildContext context,
+    String label,
+    double amount,
+    IconData icon,
+    Color color, {
+    bool fullWidth = false,
+  }) {
+    return Card(
+      child: Container(
+        width: fullWidth ? double.infinity : MediaQuery.of(context).size.width * 0.43,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              NumberFormat.currency(symbol: '\$').format(amount),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateRange = ref.watch(dateRangeProvider);
-    final totalExpenses = ref.watch(totalExpensesProvider);
+    final totalExpenses = ref.watch(totalExpensesProvider(dateRange));
+    final totalIncome = ref.watch(totalIncomeProvider(dateRange));
+    final netBalance = ref.watch(netBalanceProvider(dateRange));
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
+          SliverAppBar.large(
             floating: true,
             pinned: true,
-            title: const Text('Expenses'),
-            toolbarHeight: 48,
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Card(
-                        child: InkWell(
-                          onTap: () async {
-                            final result = await showDateRangePicker(
-                              context: context,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                              initialDateRange: dateRange,
-                            );
-                            if (result != null) {
-                              ref.read(dateRangeProvider.notifier).state = result;
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '${DateFormat.yMMMd().format(dateRange.start)} - ${DateFormat.yMMMd().format(dateRange.end)}',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+            expandedHeight: 300,
+            title: Text(
+              'Expense Manager',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            centerTitle: false,
+            actions: [
+              TextButton.icon(
+                icon: const Icon(Icons.calendar_month),
+                label: Text(
+                  '${DateFormat('MMM d').format(dateRange.start)} - ${DateFormat('MMM d').format(dateRange.end)}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                onPressed: () async {
+                  final now = DateTime.now();
+                  final lastDate = DateTime(now.year, now.month, now.day);
+                  final picked = await showDateRangePicker(
+                    context: context,
+                    firstDate: DateTime(2020),
+                    lastDate: lastDate,
+                    initialDateRange: dateRange.end.isAfter(lastDate) 
+                      ? DateTimeRange(
+                          start: dateRange.start,
+                          end: lastDate,
+                        )
+                      : dateRange,
+                  );
+                  if (picked != null) {
+                    ref.read(dateRangeProvider.notifier).state = picked;
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              expandedTitleScale: 1.0,
+              titlePadding: EdgeInsets.zero,
+              background: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 80, 8, 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 11),
+                        child: _buildAmountCard(
+                          context,
+                          'Net Balance',
+                          netBalance,
+                          Icons.account_balance_wallet,
+                          netBalance >= 0 ? Colors.green : Colors.red,
+                          fullWidth: true,
                         ),
                       ),
-                    ),
-                  ],
+                      
+                      /*  */
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildAmountCard(
+                            context,
+                            'Income',
+                            totalIncome,
+                            Icons.add_circle_outline,
+                            Colors.green,
+                          ),
+                          _buildAmountCard(
+                            context,
+                            'Expenses',
+                            totalExpenses,
+                            Icons.remove_circle_outline,
+                            Colors.red,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -75,40 +154,15 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 const SizedBox(height: 8),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total Expenses',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            NumberFormat.currency(symbol: '\$').format(totalExpenses),
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Text(
                     'Spending Trends',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: const Card(
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Card(
                     child: Padding(
                       padding: EdgeInsets.all(16),
                       child: MonthlyChart(),
@@ -122,9 +176,9 @@ class HomeScreen extends ConsumerWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: const Card(
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Card(
                     child: Padding(
                       padding: EdgeInsets.all(16),
                       child: CategoryPieChart(),
@@ -132,23 +186,15 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Text(
-                    'Recent Transactions',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 80),
+                  child: const ExpenseList(),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: ExpenseList(),
-                ),
-                const SizedBox(height: 80), // Add bottom padding for FAB
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
@@ -157,8 +203,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           );
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Expense'),
+        child: const Icon(Icons.add),
       ),
     );
   }

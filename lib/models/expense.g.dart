@@ -36,6 +36,12 @@ const ExpenseSchema = CollectionSchema(
       id: 3,
       name: r'description',
       type: IsarType.string,
+    ),
+    r'type': PropertySchema(
+      id: 4,
+      name: r'type',
+      type: IsarType.byte,
+      enumMap: _ExpensetypeEnumValueMap,
     )
   },
   estimateSize: _expenseEstimateSize,
@@ -118,6 +124,7 @@ void _expenseSerialize(
   writer.writeString(offsets[1], object.category);
   writer.writeDateTime(offsets[2], object.date);
   writer.writeString(offsets[3], object.description);
+  writer.writeByte(offsets[4], object.type.index);
 }
 
 Expense _expenseDeserialize(
@@ -131,6 +138,8 @@ Expense _expenseDeserialize(
     category: reader.readString(offsets[1]),
     date: reader.readDateTime(offsets[2]),
     description: reader.readStringOrNull(offsets[3]),
+    type: _ExpensetypeValueEnumMap[reader.readByteOrNull(offsets[4])] ??
+        TransactionType.expense,
   );
   object.id = id;
   return object;
@@ -151,10 +160,22 @@ P _expenseDeserializeProp<P>(
       return (reader.readDateTime(offset)) as P;
     case 3:
       return (reader.readStringOrNull(offset)) as P;
+    case 4:
+      return (_ExpensetypeValueEnumMap[reader.readByteOrNull(offset)] ??
+          TransactionType.expense) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _ExpensetypeEnumValueMap = {
+  'expense': 0,
+  'income': 1,
+};
+const _ExpensetypeValueEnumMap = {
+  0: TransactionType.expense,
+  1: TransactionType.income,
+};
 
 Id _expenseGetId(Expense object) {
   return object.id;
@@ -928,6 +949,59 @@ extension ExpenseQueryFilter
       ));
     });
   }
+
+  QueryBuilder<Expense, Expense, QAfterFilterCondition> typeEqualTo(
+      TransactionType value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'type',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterFilterCondition> typeGreaterThan(
+    TransactionType value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'type',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterFilterCondition> typeLessThan(
+    TransactionType value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'type',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterFilterCondition> typeBetween(
+    TransactionType lower,
+    TransactionType upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'type',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension ExpenseQueryObject
@@ -982,6 +1056,18 @@ extension ExpenseQuerySortBy on QueryBuilder<Expense, Expense, QSortBy> {
   QueryBuilder<Expense, Expense, QAfterSortBy> sortByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterSortBy> sortByType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'type', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterSortBy> sortByTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'type', Sort.desc);
     });
   }
 }
@@ -1047,6 +1133,18 @@ extension ExpenseQuerySortThenBy
       return query.addSortBy(r'id', Sort.desc);
     });
   }
+
+  QueryBuilder<Expense, Expense, QAfterSortBy> thenByType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'type', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QAfterSortBy> thenByTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'type', Sort.desc);
+    });
+  }
 }
 
 extension ExpenseQueryWhereDistinct
@@ -1074,6 +1172,12 @@ extension ExpenseQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Expense, Expense, QDistinct> distinctByType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'type');
     });
   }
 }
@@ -1107,6 +1211,12 @@ extension ExpenseQueryProperty
   QueryBuilder<Expense, String?, QQueryOperations> descriptionProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'description');
+    });
+  }
+
+  QueryBuilder<Expense, TransactionType, QQueryOperations> typeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'type');
     });
   }
 }

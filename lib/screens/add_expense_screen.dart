@@ -18,28 +18,32 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _descriptionController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Food';
+  TransactionType _selectedType = TransactionType.expense;
 
-  final List<String> _categories = [
-    'Food',
-    'Groceries',
-    'Transportation',
-    'Entertainment',
-    'Shopping',
-    'Utilities',
-    'Health',
-    'Education',
-    'Travel',
-    'Rent',
-    'Bills',
-    'Others',
-  ];
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
+  final Map<TransactionType, List<String>> _categories = {
+    TransactionType.expense: [
+      'Food',
+      'Groceries',
+      'Transportation',
+      'Entertainment',
+      'Shopping',
+      'Utilities',
+      'Health',
+      'Education',
+      'Travel',
+      'Others',
+    ],
+    TransactionType.income: [
+      'Salary',
+      'Freelance',
+      'Investments',
+      'Business',
+      'Rental',
+      'Gifts',
+      'Refunds',
+      'Others',
+    ],
+  };
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
@@ -50,6 +54,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ? null 
             : _descriptionController.text.trim(),
         date: _selectedDate,
+        type: _selectedType,
       );
 
       DatabaseService.addExpense(expense);
@@ -59,18 +64,58 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isExpense = _selectedType == TransactionType.expense;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Expense'),
+        title: Text(isExpense ? 'Add Expense' : 'Add Income'),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 32),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Transaction Type Selector
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Type',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        SegmentedButton<TransactionType>(
+                          segments: const [
+                            ButtonSegment(
+                              value: TransactionType.expense,
+                              icon: Icon(Icons.remove_circle_outline),
+                              label: Text('Expense'),
+                            ),
+                            ButtonSegment(
+                              value: TransactionType.income,
+                              icon: Icon(Icons.add_circle_outline),
+                              label: Text('Income'),
+                            ),
+                          ],
+                          selected: {_selectedType},
+                          onSelectionChanged: (Set<TransactionType> selected) {
+                            setState(() {
+                              _selectedType = selected.first;
+                              _selectedCategory = _categories[_selectedType]!.first;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Category Selector
                 Card(
                   child: Padding(
@@ -86,7 +131,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _categories.map((category) {
+                          children: _categories[_selectedType]!.map((category) {
                             final isSelected = category == _selectedCategory;
                             final categoryColor = Colors.primaries[category.hashCode % Colors.primaries.length];
                             return FilterChip(
@@ -131,7 +176,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             labelText: 'Amount',
                             prefixIcon: Icon(
                               Icons.attach_money,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: isExpense ? Colors.red : Colors.green,
                             ),
                             border: const OutlineInputBorder(),
                           ),
@@ -187,10 +232,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               labelText: 'Date',
-                              prefixIcon: Icon(
-                                Icons.calendar_today,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                              prefixIcon: const Icon(Icons.calendar_today),
                               border: const OutlineInputBorder(),
                             ),
                             child: Text(
@@ -209,13 +251,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     padding: const EdgeInsets.all(16),
                     child: TextFormField(
                       controller: _descriptionController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Description (Optional)',
-                        prefixIcon: Icon(
-                          Icons.description,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.description),
+                        border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
                     ),
@@ -227,9 +266,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   onPressed: _submitForm,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: isExpense ? Colors.red : Colors.green,
                   ),
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save Expense'),
+                  icon: Icon(isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline),
+                  label: Text(isExpense ? 'Save Expense' : 'Save Income'),
                 ),
               ],
             ),

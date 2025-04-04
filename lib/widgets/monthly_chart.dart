@@ -1,7 +1,8 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 
 class MonthlyChart extends ConsumerWidget {
@@ -9,63 +10,90 @@ class MonthlyChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final expensesAsync = ref.watch(expensesProvider);
+    final dateRange = ref.watch(dateRangeProvider);
+    final expensesAsync = ref.watch(expensesProvider(dateRange));
 
     return expensesAsync.when(
       data: (expenses) {
         if (expenses.isEmpty) {
-          return const SizedBox(
-            height: 200,
-            child: Center(
-              child: Text('No data to display'),
-            ),
+          return const Center(
+            child: Text('No transactions in this period'),
           );
         }
 
-        // Group expenses by month
-        final Map<DateTime, double> monthlyTotals = {};
+        // Group by date and type
+        final dailyData = <DateTime, Map<TransactionType, double>>{};
         for (final expense in expenses) {
           final date = DateTime(
             expense.date.year,
             expense.date.month,
+            expense.date.day,
           );
-          monthlyTotals[date] = (monthlyTotals[date] ?? 0) + expense.amount;
+          dailyData[date] = dailyData[date] ?? {};
+          dailyData[date]![expense.type] = (dailyData[date]![expense.type] ?? 0) + expense.amount;
         }
 
-        if (monthlyTotals.isEmpty) {
-          return const SizedBox(
-            height: 200,
-            child: Center(
-              child: Text('No expenses to display'),
-            ),
+        // Sort dates
+        final dates = dailyData.keys.toList()..sort();
+        
+        // Create bar groups
+        final barGroups = dates.asMap().entries.map((entry) {
+          final date = entry.value;
+          final data = dailyData[date]!;
+          
+          return BarChartGroupData(
+            x: entry.key,
+            barRods: [
+              BarChartRodData(
+                toY: data[TransactionType.income] ?? 0,
+                color: Colors.green,
+                width: 12,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+              BarChartRodData(
+                toY: data[TransactionType.expense] ?? 0,
+                color: Colors.red,
+                width: 12,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ],
           );
-        }
-
-        final maxAmount = monthlyTotals.values
-            .reduce((value, element) => value > element ? value : element);
+        }).toList();
 
         return AspectRatio(
           aspectRatio: 1.7,
           child: Padding(
-            padding: const EdgeInsets.only(top: 16, right: 24),
+            padding: const EdgeInsets.only(top: 16),
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: maxAmount * 1.1,
+                maxY: barGroups.fold(0.0, (maxY, group) {
+                  final groupMax = group.barRods.fold(
+                    0.0,
+                    (max, rod) => rod.toY > max ? rod.toY : max,
+                  );
+                  return groupMax > maxY ? groupMax : maxY;
+                }) * 1.2,
                 titlesData: FlTitlesData(
                   show: true,
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        if (value < 0 || value >= monthlyTotals.length) {
+                        if (value < 0 || value >= dates.length) {
                           return const SizedBox.shrink();
                         }
-                        final date = monthlyTotals.keys.elementAt(value.toInt());
-                        return Transform.rotate(
-                          angle: -0.5, // Rotate text by -30 degrees
+                        final date = dates[value.toInt()];
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            DateFormat.MMM().format(date),
+                            DateFormat('d/M').format(date),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         );
@@ -77,9 +105,8 @@ class MonthlyChart extends ConsumerWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        if (value == 0) return const SizedBox.shrink();
                         return Padding(
-                          padding: const EdgeInsets.only(right: 4),
+                          padding: const EdgeInsets.only(right: 8),
                           child: Text(
                             NumberFormat.compact().format(value),
                             style: Theme.of(context).textTheme.bodySmall,
@@ -89,49 +116,31 @@ class MonthlyChart extends ConsumerWidget {
                       reservedSize: 40,
                     ),
                   ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                ),
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                barGroups: barGroups,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    tooltipBgColor: Colors.blueGrey,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final date = dates[group.x];
+                      final amount = rod.toY;
+                      final type = rodIndex == 0 ? 'Income' : 'Expense';
+                      return BarTooltipItem(
+                        '$type\n${DateFormat('MMM d').format(date)}\n${NumberFormat.currency(symbol: '\$').format(amount)}',
+                        const TextStyle(color: Colors.white),
+                      );
+                    },
                   ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
                 ),
-                gridData: const FlGridData(
-                  show: false,
-                ),
-                borderData: FlBorderData(
-                  show: false,
-                ),
-                barGroups: monthlyTotals.entries.map((entry) {
-                  return BarChartGroupData(
-                    x: monthlyTotals.keys.toList().indexOf(entry.key),
-                    barRods: [
-                      BarChartRodData(
-                        toY: entry.value,
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 16,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(4),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
               ),
             ),
           ),
         );
       },
-      loading: () => const SizedBox(
-        height: 200,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, stack) => SizedBox(
-        height: 200,
-        child: Center(
-          child: Text('Error: $error'),
-        ),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 }
