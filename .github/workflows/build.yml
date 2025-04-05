@@ -42,7 +42,20 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=keystore.jks" >> android/key.properties
-        
+
+      # 🔧 Patch isar_flutter_libs to add namespace
+      - name: Patch isar_flutter_libs to add namespace
+        run: |
+          FILE="$HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle"
+          if grep -q 'namespace' "$FILE"; then
+            echo "Namespace already set."
+          else
+            sed -i '' '/android {/a\
+              namespace "dev.isar.isar_flutter_libs"
+            ' "$FILE"
+            echo "Namespace added."
+          fi
+
       - name: Build APK
         run: flutter build apk --release
 
