@@ -8,10 +8,10 @@ on:
     branches:
       - main
 
-jobs:  
-  build:      
-    name: Build & Release 
-    runs-on: macos-latest 
+jobs:
+  build:
+    name: Build & Release
+    runs-on: macos-latest
 
     steps:
       - name: Checkout Repository
@@ -35,7 +35,7 @@ jobs:
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
-          
+
       - name: Create key.properties
         run: |
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
@@ -43,18 +43,21 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=keystore.jks" >> android/key.properties
 
-      # 🔧 Patch isar_flutter_libs to add namespace
-      - name: Patch isar_flutter_libs to add namespace
+      # Uncomment this if you're using build.gradle (Groovy)
+      - name: Patch build.gradle for NDK and SDK (Groovy)
         run: |
-          FILE="$HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle"
-          if grep -q 'namespace' "$FILE"; then
-            echo "Namespace already set."
-          else
-            sed -i '' '/android {/a\
-              namespace "dev.isar.isar_flutter_libs"
-            ' "$FILE"
-            echo "Namespace added."
-          fi
+          FILE="android/app/build.gradle"
+          sed -i '' '/android {/a\
+              compileSdkVersion 33\n        ndkVersion "27.0.12077973"
+          ' "$FILE"
+
+      # Uncomment this if you're using build.gradle.kts (Kotlin DSL)
+      # - name: Patch build.gradle.kts for NDK and SDK (Kotlin DSL)
+      #   run: |
+      #     FILE="android/app/build.gradle.kts"
+      #     sed -i '' '/android {/a\
+      #         compileSdk = 33\n        ndkVersion = "27.0.12077973"
+      #     ' "$FILE"
 
       - name: Build APK
         run: flutter build apk --release
@@ -100,7 +103,7 @@ jobs:
         run: |
           new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
           echo "VERSION=$new_version" >> $GITHUB_ENV
-        
+
       - name: Create Release
         uses: actions/create-release@v1
         env:
