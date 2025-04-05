@@ -7,8 +7,8 @@ plugins {
 android {
     namespace = "com.example.expensive"
 
-    compileSdk = (project.findProperty("flutter.compileSdkVersion") as String).toInt()
-    ndkVersion = project.findProperty("flutter.ndkVersion") as String
+    compileSdk = 33
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -21,10 +21,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.expensive"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = 24
+        targetSdk = 33
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
