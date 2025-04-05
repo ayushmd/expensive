@@ -46,7 +46,7 @@ jobs:
       # Uncomment this if you're using build.gradle (Groovy)
       - name: Patch build.gradle for NDK and SDK (Groovy)
         run: |
-          FILE="android/app/src/build.gradle.kts"
+          FILE="android/app/build.gradle.kts"
           sed -i '' '/android {/a\
               compileSdkVersion 33\n        ndkVersion "27.0.12077973"
           ' "$FILE"
