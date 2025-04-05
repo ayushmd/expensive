@@ -23,11 +23,11 @@ jobs:
           distribution: 'oracle'
           java-version: '17'
 
-      - name: Set Up Flutter
-        uses: subosito/flutter-action@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.2'
-          channel: 'stable'
+          channel: stable
+          flutter-version: 3.19.0
 
       - name: Install Dependencies
         run: flutter pub get
