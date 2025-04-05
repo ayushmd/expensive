@@ -1,35 +1,103 @@
-name: Build and Release
+name: Build & Release
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+jobs:  
+  build:      
+    name: Build & Release 
+    runs-on: macos-latest 
+
     steps:
-      - uses: actions/checkout@v3
-      
-      - uses: actions/setup-java@v3.12.0
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Java
+        uses: actions/setup-java@v3.12.0
         with:
-          distribution: 'temurin'
-          java-version: '11'
-      
-      - uses: subosito/flutter-action@v2
+          distribution: 'oracle'
+          java-version: '17'
+
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'latest'
-      
-      - name: Get dependencies
+          flutter-version: '3.22.2'
+          channel: 'stable'
+
+      - name: Install Dependencies
         run: flutter pub get
-      
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+          
+      - name: Create key.properties
+        run: |
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=keystore.jks" >> android/key.properties
+        
       - name: Build APK
         run: flutter build apk --release
-      
-      - name: Archive APK
+
+      - name: Build appBundle
+        run: flutter build appbundle
+
+      - name: Build IPA
+        run: flutter build ipa --no-codesign
+
+      - name: Compress Archives and IPAs
+        run: |
+          cd build
+          tar -czf ios_build.tar.gz ios
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+            build/ios_build.tar.gz
+
+      - name: Extract version
+        id: extract_version
+        run: |
+          version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
+          echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Check if Tag Exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Modify Tag
+        if: env.TAG_EXISTS == 'true'
+        id: modify_tag
+        run: |
+          new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
+          echo "VERSION=$new_version" >> $GITHUB_ENV
+        
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
+          body: |
+            APK: build/app/outputs/flutter-apk/app-release.apk
+            AAB: build/app/outputs/bundle/release/app-release.aab
+            IPA: build/ios_build.tar.gz
+          draft: false
+          prerelease: false
