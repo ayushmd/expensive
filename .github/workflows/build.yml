@@ -32,46 +32,63 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      # Configure Isar Flutter build
+      - name: Configure Isar Flutter
+        run: |
+          # Update Isar Flutter build.gradle
+          echo "group 'dev.isar.isar_flutter_libs'" > $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "version '1.0'" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "buildscript {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    repositories {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        google()" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        mavenCentral()" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    }" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    dependencies {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        classpath 'com.android.tools.build:gradle:7.3.1'" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    }" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "}" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "rootProject.allprojects {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    repositories {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        google()" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        mavenCentral()" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    }" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "}" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "apply plugin: 'com.android.library'" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "android {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    namespace \"dev.isar.isar_flutter_libs\"" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    compileSdk 33" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    defaultConfig {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        minSdk 21" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "        targetSdk 33" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    }" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "}" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "dependencies {" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "    implementation \"androidx.startup:startup-runtime:1.1.1\"" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+          echo "}" >> $HOME/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/android/build.gradle
+
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
-
+          
       - name: Create key.properties
         run: |
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=keystore.jks" >> android/key.properties
-
-      # Uncomment this if you're using build.gradle (Groovy)
-      - name: Patch build.gradle for NDK and SDK (Groovy)
-        run: |
-          FILE="android/app/build.gradle.kts"
-          sed -i '' '/android {/a\
-              compileSdkVersion 33\n        ndkVersion "27.0.12077973"
-          ' "$FILE"
-
-      # Uncomment this if you're using build.gradle.kts (Kotlin DSL)
-      # - name: Patch build.gradle.kts for NDK and SDK (Kotlin DSL)
-      #   run: |
-      #     FILE="android/app/build.gradle.kts"
-      #     sed -i '' '/android {/a\
-      #         compileSdk = 33\n        ndkVersion = "27.0.12077973"
-      #     ' "$FILE"
-
+        
       - name: Build APK
         run: flutter build apk --release
 
       - name: Build appBundle
         run: flutter build appbundle
-
-      - name: Build IPA
-        run: flutter build ipa --no-codesign
-
-      - name: Compress Archives and IPAs
-        run: |
-          cd build
-          tar -czf ios_build.tar.gz ios
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -80,29 +97,12 @@ jobs:
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-            build/ios_build.tar.gz
 
       - name: Extract version
         id: extract_version
         run: |
           version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
           echo "VERSION=$version" >> $GITHUB_ENV
-
-      - name: Check if Tag Exists
-        id: check_tag
-        run: |
-          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
-            echo "TAG_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "TAG_EXISTS=false" >> $GITHUB_ENV
-          fi
-
-      - name: Modify Tag
-        if: env.TAG_EXISTS == 'true'
-        id: modify_tag
-        run: |
-          new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
-          echo "VERSION=$new_version" >> $GITHUB_ENV
 
       - name: Create Release
         uses: actions/create-release@v1
@@ -114,6 +114,5 @@ jobs:
           body: |
             APK: build/app/outputs/flutter-apk/app-release.apk
             AAB: build/app/outputs/bundle/release/app-release.aab
-            IPA: build/ios_build.tar.gz
           draft: false
           prerelease: false
