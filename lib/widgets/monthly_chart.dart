@@ -90,11 +90,14 @@ class MonthlyChart extends ConsumerWidget {
                           return const SizedBox.shrink();
                         }
                         final date = dates[value.toInt()];
+                        final formattedDate = DateFormat('d/M').format(date);
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            DateFormat('d/M').format(date),
+                            formattedDate,
                             style: Theme.of(context).textTheme.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         );
                       },
@@ -105,11 +108,14 @@ class MonthlyChart extends ConsumerWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
+                        final formattedValue = NumberFormat.compact().format(value);
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Text(
-                            NumberFormat.compact().format(value),
+                            formattedValue,
                             style: Theme.of(context).textTheme.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         );
                       },

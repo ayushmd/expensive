@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
   }) {
     return Card(
       child: Container(
-        width: fullWidth ? double.infinity : MediaQuery.of(context).size.width * 0.43,
+        width: fullWidth ? double.infinity : MediaQuery.of(context).size.width * 0.45,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,9 +30,12 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Icon(icon, color: color),
                 const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -106,43 +109,62 @@ class HomeScreen extends ConsumerWidget {
               background: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(8, 80, 8, 0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 11),
-                        child: _buildAmountCard(
-                          context,
-                          'Net Balance',
-                          netBalance,
-                          Icons.account_balance_wallet,
-                          netBalance >= 0 ? Colors.green : Colors.red,
-                          fullWidth: true,
-                        ),
+                  child: SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.35,
                       ),
-                      
-                      /*  */
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildAmountCard(
-                            context,
-                            'Income',
-                            totalIncome,
-                            Icons.add_circle_outline,
-                            Colors.green,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
+                            child: _buildAmountCard(
+                              context,
+                              'Net Balance',
+                              netBalance,
+                              Icons.account_balance_wallet,
+                              netBalance >= 0 ? Colors.green : Colors.red,
+                              fullWidth: true,
+                            ),
                           ),
-                          _buildAmountCard(
-                            context,
-                            'Expenses',
-                            totalExpenses,
-                            Icons.remove_circle_outline,
-                            Colors.red,
+                          
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: _buildAmountCard(
+                                      context,
+                                      'Income',
+                                      totalIncome,
+                                      Icons.add_circle_outline,
+                                      Colors.green,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: _buildAmountCard(
+                                      context,
+                                      'Expenses',
+                                      totalExpenses,
+                                      Icons.remove_circle_outline,
+                                      Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
