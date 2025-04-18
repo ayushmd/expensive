@@ -4,15 +4,18 @@ import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../services/database_service.dart';
 import '../utils/category_icons.dart';
+import '../utils/income_icons.dart';
+import '../services/currency_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AddExpenseScreen extends StatefulWidget {
+class AddExpenseScreen extends ConsumerStatefulWidget {
   const AddExpenseScreen({super.key});
 
   @override
-  State<AddExpenseScreen> createState() => _AddExpenseScreenState();
+  ConsumerState<AddExpenseScreen> createState() => _AddExpenseScreenState();
 }
 
-class _AddExpenseScreenState extends State<AddExpenseScreen> {
+class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -33,16 +36,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       'Travel',
       'Others',
     ],
-    TransactionType.income: [
-      'Salary',
-      'Freelance',
-      'Investments',
-      'Business',
-      'Rental',
-      'Gifts',
-      'Refunds',
-      'Others',
-    ],
+    TransactionType.income: IncomeIcons.categories,
   };
 
   void _submitForm() {
@@ -65,6 +59,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final isExpense = _selectedType == TransactionType.expense;
+    final selectedCurrency = ref.watch(currencyProvider);
     
     return Scaffold(
       appBar: AppBar(
@@ -133,12 +128,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           runSpacing: 8,
                           children: _categories[_selectedType]!.map((category) {
                             final isSelected = category == _selectedCategory;
-                            final categoryColor = Colors.primaries[category.hashCode % Colors.primaries.length];
+                            final categoryColor = isExpense 
+                                ? Colors.primaries[category.hashCode % Colors.primaries.length]
+                                : Colors.green;
                             return FilterChip(
                               selected: isSelected,
                               showCheckmark: false,
                               avatar: Icon(
-                                CategoryIcons.getIcon(category),
+                                isExpense 
+                                    ? CategoryIcons.getIcon(category)
+                                    : IncomeIcons.getIcon(category),
                                 color: isSelected ? Colors.white : categoryColor,
                                 size: 18,
                               ),
@@ -174,10 +173,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           controller: _amountController,
                           decoration: InputDecoration(
                             labelText: 'Amount',
-                            prefixIcon: Icon(
-                              Icons.attach_money,
-                              color: isExpense ? Colors.red : Colors.green,
+                            prefixIcon: Text(
+                              '  ${selectedCurrency.symbol}',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: isExpense ? Colors.red : Colors.green,
+                              ),
                             ),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                             border: const OutlineInputBorder(),
                           ),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -196,22 +199,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                         const SizedBox(height: 8),
                         // Quick Amount Buttons
+                        const SizedBox(height: 16),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: [5, 10, 50, 100, 500, 1000].map((amount) {
+                          children: [10, 20, 50, 100, 500, 1000].map((amount) {
                             return ActionChip(
-                              label: Text('\$$amount'),
+                              avatar: Text(
+                                selectedCurrency.symbol,
+                                style: TextStyle(
+                                  color: isExpense ? Colors.red : Colors.green,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              label: Text(amount.toString()),
                               onPressed: () {
                                 final currentAmount = double.tryParse(_amountController.text) ?? 0;
                                 setState(() {
                                   _amountController.text = (currentAmount + amount).toStringAsFixed(2);
                                 });
                               },
-                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                              labelStyle: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              ),
                             );
                           }).toList(),
                         ),
@@ -219,21 +226,21 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         // Date Picker
                         InkWell(
                           onTap: () async {
-                            final date = await showDatePicker(
+                            final picked = await showDatePicker(
                               context: context,
                               initialDate: _selectedDate,
-                              firstDate: DateTime(2020),
+                              firstDate: DateTime(2000),
                               lastDate: DateTime.now(),
                             );
-                            if (date != null) {
-                              setState(() => _selectedDate = date);
+                            if (picked != null) {
+                              setState(() => _selectedDate = picked);
                             }
                           },
                           child: InputDecorator(
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               labelText: 'Date',
-                              prefixIcon: const Icon(Icons.calendar_today),
-                              border: const OutlineInputBorder(),
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.calendar_today),
                             ),
                             child: Text(
                               DateFormat.yMMMd().format(_selectedDate),
@@ -249,14 +256,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description (Optional)',
-                        prefixIcon: Icon(Icons.description),
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Description (Optional)',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration: const InputDecoration(
+                            hintText: 'Add a note...',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -264,12 +280,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 // Submit Button
                 FilledButton.icon(
                   onPressed: _submitForm,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: isExpense ? Colors.red : Colors.green,
-                  ),
-                  icon: Icon(isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline),
-                  label: Text(isExpense ? 'Save Expense' : 'Save Income'),
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save'),
                 ),
               ],
             ),
@@ -277,5 +289,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

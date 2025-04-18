@@ -12,12 +12,16 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Database
-  isar: ^3.1.0
-  isar_flutter_libs: ^3.1.0+1
+  sqflite: ^2.3.2
+  sqflite_common_ffi: ^2.3.2+1
+  path: ^1.8.3
   path_provider: ^2.1.2
   
   # State Management
   flutter_riverpod: ^2.5.1
+  
+  # Storage
+  shared_preferences: ^2.2.2
   
   # UI Components
   fl_chart: ^0.66.2
@@ -28,8 +32,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
-  isar_generator: ^3.1.0+1
-  build_runner: ^2.4.8
 
 flutter:
   uses-material-design: true

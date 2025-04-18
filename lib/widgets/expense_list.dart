@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../providers/expense_provider.dart';
-import '../services/database_service.dart';
+import '../services/currency_service.dart';
 import '../utils/category_icons.dart';
+import '../utils/income_icons.dart';
+import '../services/database_service.dart';
 
 class ExpenseList extends ConsumerWidget {
   const ExpenseList({super.key});
@@ -12,15 +13,16 @@ class ExpenseList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateRange = ref.watch(dateRangeProvider);
-    final expensesAsync = ref.watch(expensesProvider(dateRange));
+    final expenses = ref.watch(expensesProvider(dateRange));
+    final currencyFormatter = ref.watch(currencyProvider.notifier);
 
-    return expensesAsync.when(
-      data: (expenses) {
-        if (expenses.isEmpty) {
+    return expenses.when(
+      data: (expenseList) {
+        if (expenseList.isEmpty) {
           return Center(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 32),
                 Icon(
                   Icons.receipt_long_outlined,
                   size: 64,
@@ -28,10 +30,10 @@ class ExpenseList extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No expenses for this period',
+                  'No transactions yet',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
               ],
             ),
@@ -39,8 +41,8 @@ class ExpenseList extends ConsumerWidget {
         }
 
         // Group expenses by date
-        final groupedExpenses = <DateTime, List<dynamic>>{};
-        for (final expense in expenses) {
+        final groupedExpenses = <DateTime, List<Expense>>{};
+        for (final expense in expenseList) {
           final date = DateTime(
             expense.date.year,
             expense.date.month,
@@ -62,34 +64,17 @@ class ExpenseList extends ConsumerWidget {
           itemBuilder: (context, index) {
             final date = sortedDates[index];
             final dayExpenses = groupedExpenses[date]!;
-            final total = dayExpenses.fold<double>(
-              0,
-              (sum, expense) => sum + expense.amount,
-            );
-
+            
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        DateFormat.yMMMd().format(date),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        NumberFormat.currency(symbol: '\$').format(total),
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    _formatDate(date),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 Card(
@@ -101,46 +86,71 @@ class ExpenseList extends ConsumerWidget {
                     separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final expense = dayExpenses[index];
-                      final color = expense.type == TransactionType.income
-                        ? Colors.green
-                        : Colors.primaries[expense.category.hashCode % Colors.primaries.length];
-
+                      final isIncome = expense.type == TransactionType.income;
+                      final color = isIncome ? Colors.green : Colors.red;
+                      
                       return Dismissible(
-                        key: Key(expense.id.toString()),
+                        key: Key('expense_${expense.id}'),
                         direction: DismissDirection.endToStart,
                         background: Container(
-                          color: Theme.of(context).colorScheme.error,
                           alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 16),
-                          child: Icon(
-                            Icons.delete,
-                            color: Theme.of(context).colorScheme.onError,
+                          padding: const EdgeInsets.only(right: 20),
+                          color: Colors.red,
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
                           ),
                         ),
-                        onDismissed: (_) {
-                          DatabaseService.deleteExpense(expense.id);
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Transaction'),
+                              content: Text(
+                                'Are you sure you want to delete this ${isIncome ? 'income' : 'expense'}?'
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) {
+                          DatabaseService.deleteExpense(expense.id!);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Expense deleted'),
-                              behavior: SnackBarBehavior.floating,
+                            SnackBar(
+                              content: Text(
+                                '${isIncome ? 'Income' : 'Expense'} deleted',
+                              ),
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                onPressed: () {
+                                  DatabaseService.addExpense(expense);
+                                },
+                              ),
                             ),
                           );
                         },
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: color.withOpacity(0.2),
+                            backgroundColor: color.withOpacity(0.1),
                             child: Icon(
-                              expense.type == TransactionType.income
-                                  ? Icons.add_circle_outline
-                                  : CategoryIcons.getIcon(expense.category),
+                              isIncome 
+                                ? IncomeIcons.getIcon(expense.category)
+                                : CategoryIcons.getIcon(expense.category),
                               color: color,
-                              size: 20,
                             ),
                           ),
                           title: Text(
                             expense.category,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: color,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -148,9 +158,11 @@ class ExpenseList extends ConsumerWidget {
                               ? Text(expense.description!)
                               : null,
                           trailing: Text(
-                            '${expense.type == TransactionType.income ? '+' : '-'}\$${expense.amount.toStringAsFixed(2)}',
+                            isIncome 
+                                ? '+${currencyFormatter.format(expense.amount)}'
+                                : '-${currencyFormatter.format(expense.amount)}',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: expense.type == TransactionType.income ? Colors.green : Colors.red,
+                              color: color,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -159,7 +171,6 @@ class ExpenseList extends ConsumerWidget {
                     },
                   ),
                 ),
-                if (index < sortedDates.length - 1) const SizedBox(height: 16),
               ],
             );
           },
@@ -170,5 +181,37 @@ class ExpenseList extends ConsumerWidget {
         child: Text('Error: $error'),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final dateToCheck = DateTime(date.year, date.month, date.day);
+
+    if (dateToCheck == DateTime(now.year, now.month, now.day)) {
+      return 'Today';
+    } else if (dateToCheck == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${date.day} ${_getMonthName(date.month)} ${date.year != now.year ? date.year : ''}';
+    }
+  }
+
+  String _getMonthName(int month) {
+    switch (month) {
+      case 1: return 'January';
+      case 2: return 'February';
+      case 3: return 'March';
+      case 4: return 'April';
+      case 5: return 'May';
+      case 6: return 'June';
+      case 7: return 'July';
+      case 8: return 'August';
+      case 9: return 'September';
+      case 10: return 'October';
+      case 11: return 'November';
+      case 12: return 'December';
+      default: return '';
+    }
   }
 }

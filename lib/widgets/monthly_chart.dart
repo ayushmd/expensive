@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/expense.dart';
 import '../providers/expense_provider.dart';
+import '../services/currency_service.dart';
 
 class MonthlyChart extends ConsumerWidget {
   const MonthlyChart({super.key});
@@ -12,6 +13,7 @@ class MonthlyChart extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dateRange = ref.watch(dateRangeProvider);
     final expensesAsync = ref.watch(expensesProvider(dateRange));
+    final selectedCurrency = ref.watch(currencyProvider);
 
     return expensesAsync.when(
       data: (expenses) {
@@ -112,7 +114,7 @@ class MonthlyChart extends ConsumerWidget {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Text(
-                            formattedValue,
+                            '${selectedCurrency.symbol}$formattedValue',
                             style: Theme.of(context).textTheme.bodySmall,
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
@@ -134,7 +136,7 @@ class MonthlyChart extends ConsumerWidget {
                       final amount = rod.toY;
                       final type = rodIndex == 0 ? 'Income' : 'Expense';
                       return BarTooltipItem(
-                        '$type\n${DateFormat('MMM d').format(date)}\n${NumberFormat.currency(symbol: '\$').format(amount)}',
+                        '$type\n${DateFormat('MMM d').format(date)}\n${selectedCurrency.symbol}${NumberFormat.compact().format(amount)}',
                         const TextStyle(color: Colors.white),
                       );
                     },

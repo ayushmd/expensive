@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../utils/category_icons.dart';
+import '../services/currency_service.dart';
 
 class CategoryPieChart extends ConsumerWidget {
   const CategoryPieChart({super.key});
@@ -12,6 +13,7 @@ class CategoryPieChart extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dateRange = ref.watch(dateRangeProvider);
     final expensesAsync = ref.watch(expensesProvider(dateRange));
+    final selectedCurrency = ref.watch(currencyProvider);
 
     return expensesAsync.when(
       data: (expenses) {
@@ -82,7 +84,7 @@ class CategoryPieChart extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${entry.key}: \$${entry.value.toStringAsFixed(2)}',
+                      '${entry.key}: ${selectedCurrency.symbol}${entry.value.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
