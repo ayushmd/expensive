@@ -12,11 +12,11 @@ Visualize your spending patterns with beautiful charts and graphs.
 ### 🏷️ Smart Categories
 Automatically categorize your expenses for better organization.
 
-### 🔔 Budget Alerts
-Get notified when you're approaching your budget limits.
+### ✏️ Customisable Transactions
+Personalize your transactions with custom categories and notes.
 
-### ☁️ Cloud Sync
-Access your data from anywhere, anytime.
+### 📱 Client Side
+No Client-Server gimmick, everything stored in your device.
 
 ## Screenshots
 
