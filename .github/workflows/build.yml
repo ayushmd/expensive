@@ -3,10 +3,10 @@ name: Build & Release
 on:
   pull_request:
     branches:
-      - main
+      - dev
   push:
     branches:
-      - main
+      - dev
     tags:
       - 'v*'
 
@@ -48,9 +48,6 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Build appBundle
-        run: flutter build appbundle
-
       - name: Extract version
         id: version
         run: |
@@ -60,18 +57,14 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ env.VERSION }}
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          name: release-1.6.0
+          path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          files: build/app/outputs/flutter-apk/app-release.apk
           draft: false
           prerelease: false
           generate_release_notes: true
