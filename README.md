@@ -1,7 +1,5 @@
 # Expensive - Smart Expense Tracker
 
-![App Screenshot](website/landing_page.jpeg)
-
 A powerful and intuitive expense tracking app that helps you take control of your finances. Built with Flutter for a beautiful, native experience.
 
 ## Features
