@@ -13,6 +13,7 @@
             <div class="logo">Expensive</div>
             <div class="nav-links">
                 <a href="#features">Features</a>
+                <a href="#screenshots">Screenshots</a>
                 <a href="#download">Download</a>
                 <a href="#contact">Contact</a>
             </div>
@@ -27,7 +28,14 @@
                 <a href="#download" class="cta-button">Download Now</a>
             </div>
             <div class="hero-image">
-                <img src="app-preview.png" alt="App Preview">
+                <img src="landing_page.jpeg" alt="App Screenshot 1" class="active">
+                <img src="landing_page_lower_Section.jpeg" alt="App Screenshot 2">
+                <img src="landing_page_delete_feature.jpeg" alt="App Screenshot 3">
+                <img src="second_page.jpeg" alt="App Screenshot 4">
+                <div class="screenshot-controls">
+                    <button class="prev-btn"><i class="fas fa-chevron-left"></i></button>
+                    <button class="next-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
             </div>
         </section>
 
@@ -53,6 +61,24 @@
                     <i class="fas fa-cloud"></i>
                     <h3>Cloud Sync</h3>
                     <p>Access your data from anywhere, anytime.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="screenshots" class="screenshots">
+            <h2>App Screenshots</h2>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <img src="landing_page.jpeg" alt="App Screenshot 1" class="active">
+                </div>
+                <div class="screenshot-item">
+                    <img src="landing_page_lower_Section.jpeg" alt="App Screenshot 2">
+                </div>
+                <div class="screenshot-item">
+                    <img src="landing_page_delete_feature.jpeg" alt="App Screenshot 3">
+                </div>
+                <div class="screenshot-item">
+                    <img src="second_page.jpeg" alt="App Screenshot 4">
                 </div>
             </div>
         </section>
@@ -84,5 +110,34 @@
     <footer>
         <p>&copy; 2024 Expensive App. All rights reserved.</p>
     </footer>
+
+    <script>
+        // Screenshot carousel functionality
+        const images = document.querySelectorAll('.hero-image img');
+        const prevBtn = document.querySelector('.prev-btn');
+        const nextBtn = document.querySelector('.next-btn');
+        let currentIndex = 0;
+
+        function showImage(index) {
+            images.forEach(img => img.classList.remove('active'));
+            images[index].classList.add('active');
+        }
+
+        prevBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            showImage(currentIndex);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+        });
+
+        // Auto-rotate screenshots every 3 seconds
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+        }, 3000);
+    </script>
 </body>
 </html> 
