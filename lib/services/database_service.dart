@@ -16,6 +16,7 @@ class DatabaseService {
   static Timer? _watchTimer;
   static DateTime? _lastFetch;
   static const _minFetchInterval = Duration(milliseconds: 100);
+  static DateTimeRange? _currentDateRange;
 
   static Future<void> ensureInitialized() async {
     if (!_initialized && !_isInitializing) {
@@ -150,6 +151,8 @@ class DatabaseService {
   ) {
     debugPrint('Setting up expense stream for date range: ${start.toIso8601String()} to ${end.toIso8601String()}');
     
+    _currentDateRange = DateTimeRange(start: start, end: end);
+    
     if (_expenseStreamController != null) {
       debugPrint('Closing existing expense stream');
       _expenseStreamController!.close();
@@ -180,6 +183,11 @@ class DatabaseService {
         final db = await database;
         final results = await db.query(
           'expenses',
+          where: 'date >= ? AND date <= ?',
+          whereArgs: [
+            _currentDateRange?.start.toIso8601String(),
+            _currentDateRange?.end.toIso8601String(),
+          ],
           orderBy: 'date DESC',
         );
         
