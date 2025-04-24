@@ -1,7 +1,7 @@
 name: expensive
 description: "A modern expense tracker app with local storage."
 publish_to: 'none'
-version: 2.1.0
+version: 2.2.0
 
 environment:
   sdk: ^3.7.2

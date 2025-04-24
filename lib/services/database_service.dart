@@ -128,7 +128,8 @@ class DatabaseService {
       await db.transaction((txn) async {
         await txn.insert('expenses', expense.toMap());
       });
-      _notifyListeners();
+      // Force immediate update
+      await _fetchAndEmitExpenses();
     } catch (e, stackTrace) {
       debugPrint('Error adding expense: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -138,11 +139,7 @@ class DatabaseService {
 
   static Future<void> _notifyListeners() async {
     if (_expenseStreamController != null && !_expenseStreamController!.isClosed) {
-      final now = DateTime.now();
-      if (_lastFetch == null || now.difference(_lastFetch!) >= _minFetchInterval) {
-        _lastFetch = now;
-        await _fetchAndEmitExpenses();
-      }
+      await _fetchAndEmitExpenses();
     }
   }
 
@@ -152,7 +149,9 @@ class DatabaseService {
   ) {
     debugPrint('Setting up expense stream for date range: ${start.toIso8601String()} to ${end.toIso8601String()}');
     
-    _currentDateRange = DateTimeRange(start: start, end: end);
+    // Ensure we include the full end date
+    final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+    _currentDateRange = DateTimeRange(start: start, end: endOfDay);
     
     if (_expenseStreamController != null) {
       debugPrint('Closing existing expense stream');
@@ -165,8 +164,8 @@ class DatabaseService {
     // Initial fetch
     _fetchAndEmitExpenses();
     
-    // Set up periodic updates with a more reasonable interval
-    _watchTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    // Set up more frequent updates
+    _watchTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _fetchAndEmitExpenses();
     });
     
